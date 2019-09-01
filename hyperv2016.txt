@@ -1,0 +1,84 @@
+get-vmhost
+get-netadaper
+get-disk
+get-physicaldisk
+
+netsh int ip sh int
+
+netsh int ip add dns 2 192.168.6.250
+
+net share liyang=d:\liyang /grant:administrator,full
+
+net share liyang /d
+
+new-netlbfoteam -name team1 -teammembers nic3,nic4
+
+Get-NetLbfoTeam
+
+Get-PhysicalDisk -CanPool $True
+
+New-StoragePool -FriendlyName liyang -StorageSubSystemName hyperv01 -PhysicalDisks (get-physicaldisk -SerialNumber 6SL163GT,6SL0Y1W3,6SL0RFZW,6SL17GY8)
+
+Get-StoragePool -FriendlyName liyang |Get-PhysicalDisk
+
+Add-PhysicalDisk -StoragePoolFriendlyName liyang -PhysicalDisks (get-physicaldisk -SerialNumber 6SL0XJ0V) -Usage HotSpare
+
+New-VirtualDisk -StoragePoolFriendlyName liyang -FriendlyName vdisk1 -Size 600GB -ProvisioningType thin -ResiliencySettingName Parity -PhysicalDiskRedundancy 1
+
+New-Partition -DiskNumber 4 -UseMaximumSize | Format-Volume -FileSystem ntfs
+
+Get-Partition -DiskNumber 4 -PartitionNumber 2 | Set-Partition -NewDriveLetter e
+
+Set-Disk -Number 6 -IsOffline $true
+set-disk -Number 6 -IsReadOnly $false
+
+Resize-VirtualDisk -FriendlyName vdisk1 -Size 1TB
+
+Repair-VirtualDisk -FriendlyName vdisk1
+
+Remove-VirtualDisk -FriendlyName vdisk1
+
+Remove-StoragePool -FriendlyName liyang
+
+new-vhd 2008.vhdx .\2008R2-template.vhdx
+new-vhd disk.vhdx 200gb
+Resize-vhd .\disk.vhdx 500gb
+
+New-VMSwitch -name vswitch1 -NetAdapterName nic2
+
+new-vm 2008-1 -MemoryStartupBytes 1gb -VHDPath .\2008-1.vhdx -SwitchName vswitch1
+get-vm
+get-vmswitch
+start-vm 2008-1
+stop-vm 2008-1
+remove-vm 2008-1
+move-vm 2008-1 node2
+
+Get-VMHardDiskDrive 2008-1
+Add-VMScsiController 2008-1
+Add-VMHardDiskDrive 2008-1 -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 0 .\disk.vhdx
+
+Get-VMNetworkAdapter 2008-1
+Add-VMNetworkAdapter 2008-1 -Name nic2 -SwitchName vswitch1
+Connect-VMNetworkAdapter 2008-1 -name nic2 -SwitchName vswitch2
+
+set-vm 2008-1 -DynamicMemory
+set-vm 2008-1 -ProcessorCount 2
+set-vm 2008-1 -AutomaticStartAction start
+set-vm 2008-1 -AutomaticStartAction nothing
+
+Install-WindowsFeature -Name File-Services,rsat-clustering,Failover-Clustering -IncludeManagementTools
+
+Test-Cluster -Node h01,h02 -Include "Storage Spaces Direct",Inventory,Network,"System Configuration"
+
+New-Cluster -Name liyang008 -Node h01,h02 -NoStorage -StaticAddress 192.168.6.210
+
+Enable-ClusterStorageSpacesDirect
+
+New-StoragePool -StorageSubSystemName StorCluster.contoso.com -FriendlyName StorPool -WriteCacheSizeDefault 0 -ProvisioningTypeDefault Fixed -ResiliencySettingNameDefault Mirror -PhysicalDisk (Get-StorageSubSystem -Name StorCluster.contoso.com | Get-PhysicalDisk)
+
+New-Volume -StoragePoolFriendlyName s2d* -FriendlyName v1 -FileSystem CSVFS_ReFS -Size 150gb
+
+cd c:\clusterstorage\volume1
+
+get-clusters2d

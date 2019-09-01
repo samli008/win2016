@@ -1,0 +1,71 @@
+#config registry key,hosts,add-windowsFeature;iscsi-service
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\ -Name Domain -Value liyang.com
+
+Add-Content C:\windows\System32\drivers\etc\hosts "192.168.50.41 h01"
+Add-Content C:\windows\System32\drivers\etc\hosts "192.168.50.42 h02"
+Add-Content C:\windows\System32\drivers\etc\hosts "192.168.50.41 h01.liyang.com"
+Add-Content C:\windows\System32\drivers\etc\hosts "192.168.50.42 h02.liyang.com"
+
+Install-WindowsFeature -Name File-Services,multipath-io,rsat-clustering,Failover-Clustering -IncludeManagementTools
+
+start-service msiscsi
+Set-Service msiscsi -startuptype automatic
+Enable-MSDSMAutomaticClaim -BusType iSCSI
+New-IscsiTargetPortal -TargetPortalAddress 192.168.50.7
+
+iscsicpl
+
+#create workgroup cluster
+New-Cluster -Name liyang008 -Node h01,h02 -StaticAddress 192.168.50.100 -AdministrativeAccessPoint DNS
+
+get-clusternode
+
+add-clusternode -name h03
+
+iscsicpl
+
+#create CSV and hyper-v vm
+
+diskpart
+list disk 
+sel disk 1 #share disk
+online disk
+attr disk clear readonly
+convert gpt  # if disk > 2T
+create part pri 
+format quick
+
+Clear-Disk -Number 4 -RemoveData
+Initialize-Disk -Number 4
+
+Set-Disk -Number 1 -IsOffline $false
+set-disk -Number 1 -IsReadOnly $false
+
+New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem ntfs
+
+Get-ClusterAvailableDisk
+Get-ClusterAvailableDisk | Add-ClusterDisk
+Add-ClusterSharedVolume "cluster disk 1"
+
+Get-ClusterResource
+
+Clear-ClusterDiskReservation -Disk 1
+
+cd C:\ClusterStorage\Volume1\
+
+New-VM -Name 2008R2-1 -path C:\ClusterStorage\Volume1 -MemoryStartupBytes 1GB -VHDPath C:\ClusterStorage\Volume1\vhd\2008R2-1.vhdx -switchname xxx  #create VM
+
+set-vm 2008R2-1 -DynamicMemory
+
+import-vm -Path .\57E65859-566D-4895-9559-EA096236FF6E.vmcx
+
+add-vmtocluster 2008R2-1
+
+Move-ClusterVirtualMachineRole c7 h02 -MigrationType quick
+
+get-clustergroup
+
+remove-clustergroup 2008-1 -RemoveResources
+
+Set-VMProcessor -VMName NestedVM -ExposeVirtualizationExtensions $true  #enable nested
+
