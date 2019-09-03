@@ -53,9 +53,10 @@ Clear-ClusterDiskReservation -Disk 1
 
 cd C:\ClusterStorage\Volume1\
 
-Install-WindowsFeature –Name FS-FileServer
-New-Item –Type Directory –Path C:\ClusterStorage\Volume1\ -Name SMBShare
-New-SmbShare -name smbshare -path c:\clusterstorage\volume1\smbshare -fullaccess administrator
+Install-WindowsFeature -name FS-FileServer
+New-Item -Type Directory -Path C:\ -Name SMBShare
+New-SmbShare -name smbshare -path c:\smbshare -fullaccess administrator
+smbconnection
 
 New-VM -Name 2008R2-1 -path C:\ClusterStorage\Volume1 -MemoryStartupBytes 1GB -VHDPath C:\ClusterStorage\Volume1\vhd\2008R2-1.vhdx -switchname xxx  #create VM
 
