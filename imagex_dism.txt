@@ -1,0 +1,10 @@
+imagex /info win2012r2.wim 2
+imagex /export win2012r2.wim 2 f:\2012.wim "win2012r GUI"
+
+imagex /mountrw 2012.wim 1 wim
+imagex /unmount /commit wim
+imagex /apply k:\hyperv2016.wim 1 c:
+
+dism /mount-wim /wimfile:c:\hyperv2016.wim /index:1 /mountdir:c:\wim 
+dism /image:d:\wim /add-driver /driver:d:\h330 /Recurse /ForceUnsigned
+dism /unmount-wim /mountdir:c:\wim /commit
